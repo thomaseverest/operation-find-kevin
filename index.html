@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chicago Spy Hunt</title>
+
+    <!-- MapLibre's CSS -->
+    <link
+        href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css"
+        rel="stylesheet"
+    />
+
+    <style>
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="map"></div>
+
+    <!-- MapLibre's JavaScript -->
+    <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+
+    <script type="module">
+        import { initializeApp } from
+            "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+
+        import { getDatabase }
+            from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZaprMpqfJoKFxGp92TCztK7d0mia6BEg",
+            authDomain: "kevin-24e51.firebaseapp.com",
+            databaseURL: "https://kevin-24e51-default-rtdb.firebaseio.com",
+            projectId: "kevin-24e51",
+            storageBucket: "kevin-24e51.firebasestorage.app",
+            messagingSenderId: "1020899420386",
+            appId: "1:1020899420386:web:70ff285d598301202756bb",
+            measurementId: "G-Z1NHMPLLG9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        console.log("Firebase connected!");
+    </script>
+
+    <script>
+    const map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://tiles.openfreemap.org/styles/liberty',
+        center: [-87.6298, 41.8781],
+        zoom: 11
+    });
+
+    let playerMarker = null;
+
+    map.on('load', () => {
+
+        // Hide all labels and icons
+        for (const layer of map.getStyle().layers) {
+            if (layer.type === 'symbol') {
+                map.setLayoutProperty(
+                    layer.id,
+                    'visibility',
+                    'none'
+                );
+            }
+        }
+
+        // Ask the browser for your location
+        navigator.geolocation.watchPosition(
+            (position) => {
+
+                const longitude = position.coords.longitude;
+                const latitude = position.coords.latitude;
+
+                console.log(
+                    "My location:",
+                    latitude,
+                    longitude
+                );
+
+                // Create marker the first time
+                if (playerMarker === null) {
+
+                    playerMarker = new maplibregl.Marker()
+                        .setLngLat([longitude, latitude])
+                        .addTo(map);
+
+                    // Center map on you
+                    map.flyTo({
+                        center: [longitude, latitude],
+                        zoom: 15
+                    });
+
+                } else {
+
+                    // Move existing marker
+                    playerMarker.setLngLat([
+                        longitude,
+                        latitude
+                    ]);
+                }
+            },
+
+            (error) => {
+                console.log("Location error:", error);
+            },
+
+            {
+                enableHighAccuracy: true,
+                maximumAge: 2000,
+                timeout: 10000
+            }
+        );
+
+    });
+</script>
+
+</body>
+</html>
