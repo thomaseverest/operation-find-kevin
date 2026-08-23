@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chicago Spy Hunt</title>
+    <title>Operation Find Kevin</title>
 
     <!-- MapLibre's CSS -->
     <link
@@ -54,76 +54,138 @@
         console.log("Firebase connected!");
     </script>
 
-    <script>
+   <script>
     const map = new maplibregl.Map({
         container: 'map',
         style: 'https://tiles.openfreemap.org/styles/liberty',
         center: [-87.6298, 41.8781],
-        zoom: 11
+        zoom: 14 // Increased zoom so vector tile data includes small POIs & streets
     });
 
     let playerMarker = null;
 
-    map.on('load', () => {
+    const labelWords = [
+        "Kevin", "Kevan", "Keven", "Kevyn", "Jason",
+        "Riley", "Reilly", "Rileigh", "Rilee", "Rylee", "Ryleigh", "Ryley", "Rylie",
+        "Robert", "Rupert", "Bobby", "Royster", "Smoke", "Sesh",
+        "Thomas", "Tomas", "Everest", "Cheeky", "Tiki",
+        "Cole", "Serfass",
+        "Sam", "Allan",
+        "Pete", "Petrov", "Pedro", "Pyotr", "Bradl",
+        "Dani", "Toast", "Morken", "Morkin", "Bread",
+        "Kellen",
+        "Michael", "Mikhail", "Larkin", "Larken",
+        "Simon",
+        "Ryan", "Cross",
+        "Christian", "Cristiano", "Booth",
+        "David",
+        "Marshall", "Bower",
+        "Shayne",
+        "LaBagh Woods"
+    ];
 
-        // Hide all labels and icons
-        for (const layer of map.getStyle().layers) {
-            if (layer.type === 'symbol') {
-                map.setLayoutProperty(
-                    layer.id,
-                    'visibility',
-                    'none'
-                );
+    // Safely check if lowercase feature name contains target word
+    function makeWordFilter() {
+    const wordConditions = labelWords.flatMap(word => {
+        const searchWord = word.toLowerCase();
+        return [
+            // Check primary local name
+            [
+                "all",
+                ["has", "name"],
+                [">=", ["index-of", searchWord, ["downcase", ["get", "name"]]], 0]
+            ],
+            // Check primary English name
+            [
+                "all",
+                ["has", "name:en"],
+                [">=", ["index-of", searchWord, ["downcase", ["get", "name:en"]]], 0]
+            ]
+        ];
+    });
+
+    return ["any", ...wordConditions];
+}
+
+    function addLabelLayer(id, sourceLayer, vectorSourceId) {
+        map.addLayer({
+            id: id,
+            type: "symbol",
+            source: vectorSourceId,
+            "source-layer": sourceLayer,
+            filter: makeWordFilter(),
+            layout: {
+                "text-field": [
+                    "case",
+                    ["has", "name:en"], ["get", "name:en"],
+                    ["has", "name"], ["get", "name"],
+                    ""
+                ],
+                "text-size": 15,
+                "text-allow-overlap": true,
+                "text-ignore-placement": true,
+                "text-anchor": "center",
+                "text-font": ["Noto Sans Regular"]
+            },
+            paint: {
+                "text-color": "#ff0000", // Red text for high visibility while testing
+                "text-halo-color": "#ffffff",
+                "text-halo-width": 3
             }
+        });
+    }
+
+    map.on("load", () => {
+        // 1. Hide default text/icon symbols
+        map.getStyle().layers.forEach(layer => {
+            if (layer.type === "symbol") {
+                map.setLayoutProperty(layer.id, "visibility", "none");
+            }
+        });
+
+        // 2. Automatically detect the correct vector source ID (e.g. 'openfreemap')
+        const sources = map.getStyle().sources;
+        const vectorSourceId = Object.keys(sources).find(
+            key => sources[key].type === 'vector'
+        );
+
+        if (!vectorSourceId) {
+            console.error("No vector source found in style.");
+            return;
         }
 
-        // Ask the browser for your location
+        // 3. Add custom layers using the detected vector source ID
+        const targetSourceLayers = [
+            "poi",
+            "place",
+            "transportation_name",
+            "water_name",
+            "waterway",
+            "mountain_peak"
+        ];
+
+        targetSourceLayers.forEach(layerName => {
+            addLabelLayer(`custom-${layerName}-labels`, layerName, vectorSourceId);
+        });
+
+        // 4. Geolocation tracking
         navigator.geolocation.watchPosition(
             (position) => {
+                const { longitude, latitude } = position.coords;
 
-                const longitude = position.coords.longitude;
-                const latitude = position.coords.latitude;
-
-                console.log(
-                    "My location:",
-                    latitude,
-                    longitude
-                );
-
-                // Create marker the first time
-                if (playerMarker === null) {
-
+                if (!playerMarker) {
                     playerMarker = new maplibregl.Marker()
                         .setLngLat([longitude, latitude])
                         .addTo(map);
 
-                    // Center map on you
-                    map.flyTo({
-                        center: [longitude, latitude],
-                        zoom: 15
-                    });
-
+                    map.flyTo({ center: [longitude, latitude], zoom: 15 });
                 } else {
-
-                    // Move existing marker
-                    playerMarker.setLngLat([
-                        longitude,
-                        latitude
-                    ]);
+                    playerMarker.setLngLat([longitude, latitude]);
                 }
             },
-
-            (error) => {
-                console.log("Location error:", error);
-            },
-
-            {
-                enableHighAccuracy: true,
-                maximumAge: 2000,
-                timeout: 10000
-            }
+            (error) => console.log("Location error:", error),
+            { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
         );
-
     });
 </script>
 
