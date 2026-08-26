@@ -316,14 +316,12 @@ if (isKevin) {
             "players"
         );
 
-
     window.firebaseOnValue(
         playersRef,
         (snapshot) => {
 
             const players =
                 snapshot.val() || {};
-
 
             Object.entries(players).forEach(
                 ([name, data]) => {
@@ -335,7 +333,7 @@ if (isKevin) {
                         return;
                     }
 
-
+                    // Ignore invalid locations
                     if (
                         !data ||
                         typeof data.latitude !== "number" ||
@@ -344,63 +342,61 @@ if (isKevin) {
                         return;
                     }
 
-
                     const position = [
                         data.longitude,
                         data.latitude
                     ];
 
-
+                    // Create marker if needed
                     if (!playerMarkers[name]) {
 
-        // Give this player the next available color
-        if (!playerColorMap[name]) {
-            playerColorMap[name] =
-                playerColors[nextPlayerColor % playerColors.length];
+                        // Give this player the next available color
+                        if (!playerColorMap[name]) {
 
-            nextPlayerColor++;
-        }
+                            playerColorMap[name] =
+                                playerColors[
+                                    nextPlayerColor %
+                                    playerColors.length
+                                ];
 
-        const markerElement =
-            document.createElement("div");
+                            nextPlayerColor++;
+                        }
 
-        markerElement.style.width = "20px";
-        markerElement.style.height = "20px";
-        markerElement.style.borderRadius = "50%";
-        markerElement.style.backgroundColor =
-            playerColorMap[name];
-        markerElement.style.border = "3px solid white";
-        markerElement.style.boxShadow =
-            "0 1px 4px rgba(0,0,0,0.5)";
+                        const markerElement =
+                            document.createElement("div");
 
-        playerMarkers[name] =
-            new maplibregl.Marker({
-                element: markerElement
-            })
-            .setLngLat(position)
-            .setPopup(
-                new maplibregl.Popup()
-                    .setText(name)
-            )
-            .addTo(map);
+                        markerElement.style.width = "20px";
+                        markerElement.style.height = "20px";
+                        markerElement.style.borderRadius = "50%";
+                        markerElement.style.backgroundColor =
+                            playerColorMap[name];
+                        markerElement.style.border =
+                            "3px solid white";
+                        markerElement.style.boxShadow =
+                            "0 1px 4px rgba(0,0,0,0.5)";
 
-    } else {
+                        playerMarkers[name] =
+                            new maplibregl.Marker({
+                                element: markerElement
+                            })
+                            .setLngLat(position)
+                            .setPopup(
+                                new maplibregl.Popup()
+                                    .setText(name)
+                            )
+                            .addTo(map);
 
-        playerMarkers[name]
-            .setLngLat(position);
+                    } else {
 
-    }
-
+                        // Move existing marker
+                        playerMarkers[name]
+                            .setLngLat(position);
                     }
-
                 }
             );
-
         }
     );
-
 }
-    });
 </script>
 
 </body>
