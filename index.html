@@ -119,6 +119,7 @@
         "David",
         "Marshall", "Bower",
         "Shayne",
+        "Boy", "Boi",
         "LaBagh Woods"
     ];
 
@@ -289,6 +290,24 @@ navigator.geolocation.watchPosition(
 
 );
 
+const playerColors = [
+    "#e6194b",
+    "#3cb44b",
+    "#4363d8",
+    "#f58231",
+    "#911eb4",
+    "#42d4f4",
+    "#f032e6",
+    "#bfef45",
+    "#469990",
+    "#9A6324",
+    "#800000",
+    "#000075"
+];
+
+let nextPlayerColor = 0;
+const playerColorMap = {};
+
 if (isKevin) {
 
     const playersRef =
@@ -332,23 +351,45 @@ if (isKevin) {
                     ];
 
 
-                    // Create marker if needed
                     if (!playerMarkers[name]) {
 
-                        playerMarkers[name] =
-                            new maplibregl.Marker()
-                                .setLngLat(position)
-                                .setPopup(
-                                    new maplibregl.Popup()
-                                        .setText(name)
-                                )
-                                .addTo(map);
+        // Give this player the next available color
+        if (!playerColorMap[name]) {
+            playerColorMap[name] =
+                playerColors[nextPlayerColor % playerColors.length];
 
-                    } else {
+            nextPlayerColor++;
+        }
 
-                        // Move existing marker
-                        playerMarkers[name]
-                            .setLngLat(position);
+        const markerElement =
+            document.createElement("div");
+
+        markerElement.style.width = "20px";
+        markerElement.style.height = "20px";
+        markerElement.style.borderRadius = "50%";
+        markerElement.style.backgroundColor =
+            playerColorMap[name];
+        markerElement.style.border = "3px solid white";
+        markerElement.style.boxShadow =
+            "0 1px 4px rgba(0,0,0,0.5)";
+
+        playerMarkers[name] =
+            new maplibregl.Marker({
+                element: markerElement
+            })
+            .setLngLat(position)
+            .setPopup(
+                new maplibregl.Popup()
+                    .setText(name)
+            )
+            .addTo(map);
+
+    } else {
+
+        playerMarkers[name]
+            .setLngLat(position);
+
+    }
 
                     }
 
