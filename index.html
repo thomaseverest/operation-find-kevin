@@ -31,38 +31,76 @@
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
 
     <script type="module">
-        import { initializeApp } from
-            "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 
-        import { getDatabase }
-            from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+    import { initializeApp }
+        from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZaprMpqfJoKFxGp92TCztK7d0mia6BEg",
-            authDomain: "kevin-24e51.firebaseapp.com",
-            databaseURL: "https://kevin-24e51-default-rtdb.firebaseio.com",
-            projectId: "kevin-24e51",
-            storageBucket: "kevin-24e51.firebasestorage.app",
-            messagingSenderId: "1020899420386",
-            appId: "1:1020899420386:web:70ff285d598301202756bb",
-            measurementId: "G-Z1NHMPLLG9"
-        };
+    import {
+        getDatabase,
+        ref,
+        set,
+        onValue
+    }
+        from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
 
-        console.log("Firebase connected!");
-    </script>
+    const firebaseConfig = {
+
+        apiKey: "AIzaSyAZaprMpqfJoKFxGp92TCztK7d0mia6BEg",
+
+        authDomain:
+            "kevin-24e51.firebaseapp.com",
+
+        databaseURL:
+            "https://kevin-24e51-default-rtdb.firebaseio.com",
+
+        projectId:
+            "kevin-24e51",
+
+        storageBucket:
+            "kevin-24e51.firebasestorage.app",
+
+        messagingSenderId:
+            "1020899420386",
+
+        appId:
+            "1:1020899420386:web:70ff285d598301202756bb",
+
+        measurementId:
+            "G-Z1NHMPLLG9"
+    };
+
+
+    const app =
+        initializeApp(firebaseConfig);
+
+    const database =
+        getDatabase(app);
+
+
+    // Make Firebase available to the main map script
+    window.firebaseDatabase = database;
+
+    window.firebaseRef = ref;
+
+    window.firebaseSet = set;
+
+    window.firebaseOnValue = onValue;
+
+
+    console.log("Firebase connected!");
+
+</script>
 
    <script>
-    const map = new maplibregl.Map({
+   const playerMarkers = {};
+   
+   const map = new maplibregl.Map({
         container: 'map',
         style: 'https://tiles.openfreemap.org/styles/liberty',
         center: [-87.6298, 41.8781],
         zoom: 14 // Increased zoom so vector tile data includes small POIs & streets
     });
-
-    let playerMarker = null;
 
     const labelWords = [
         "Kevin", "Kevan", "Keven", "Kevyn", "Jason",
@@ -168,24 +206,159 @@
             addLabelLayer(`custom-${layerName}-labels`, layerName, vectorSourceId);
         });
 
-        // 4. Geolocation tracking
-        navigator.geolocation.watchPosition(
-            (position) => {
-                const { longitude, latitude } = position.coords;
+// ============================================================
+// PLAYER LOCATION SHARING
+// ============================================================
 
-                if (!playerMarker) {
-                    playerMarker = new maplibregl.Marker()
-                        .setLngLat([longitude, latitude])
-                        .addTo(map);
+// Ask the player who they are
+let playerName = prompt(
+    "Enter your team name:"
+);
 
-                    map.flyTo({ center: [longitude, latitude], zoom: 15 });
-                } else {
-                    playerMarker.setLngLat([longitude, latitude]);
-                }
-            },
-            (error) => console.log("Location error:", error),
-            { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+
+// Use a default if they leave it blank
+if (!playerName || playerName.trim() === "") {
+    playerName = "Unknown";
+}
+
+
+// Remove characters that aren't good for Firebase paths
+playerName = playerName
+    .trim()
+    .replace(/[.#$[\]/]/g, "_");
+
+
+// Firebase location for this player
+const playerLocationRef =
+    window.firebaseRef(
+        window.firebaseDatabase,
+        "players/" + playerName
+    );
+
+const isKevin =
+    playerName.toLowerCase() === "kevin";
+
+// Watch the phone's GPS
+navigator.geolocation.watchPosition(
+
+    (position) => {
+
+        const longitude =
+            position.coords.longitude;
+
+        const latitude =
+            position.coords.latitude;
+
+
+        console.log(
+            "My location:",
+            latitude,
+            longitude
         );
+
+
+        // ----------------------------------------------------
+        // Update our location in Firebase
+        // ----------------------------------------------------
+
+        window.firebaseSet(
+            playerLocationRef,
+            {
+                latitude: latitude,
+                longitude: longitude,
+                lastUpdate: Date.now()
+            }
+        );
+
+    },
+
+    (error) => {
+
+        console.log(
+            "Location error:",
+            error
+        );
+
+    },
+
+    {
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 10000
+    }
+
+);
+
+if (isKevin) {
+
+    const playersRef =
+        window.firebaseRef(
+            window.firebaseDatabase,
+            "players"
+        );
+
+
+    window.firebaseOnValue(
+        playersRef,
+        (snapshot) => {
+
+            const players =
+                snapshot.val() || {};
+
+
+            Object.entries(players).forEach(
+                ([name, data]) => {
+
+                    // Never show Kevin's own location
+                    if (
+                        name.toLowerCase() === "kevin"
+                    ) {
+                        return;
+                    }
+
+
+                    if (
+                        !data ||
+                        typeof data.latitude !== "number" ||
+                        typeof data.longitude !== "number"
+                    ) {
+                        return;
+                    }
+
+
+                    const position = [
+                        data.longitude,
+                        data.latitude
+                    ];
+
+
+                    // Create marker if needed
+                    if (!playerMarkers[name]) {
+
+                        playerMarkers[name] =
+                            new maplibregl.Marker()
+                                .setLngLat(position)
+                                .setPopup(
+                                    new maplibregl.Popup()
+                                        .setText(name)
+                                )
+                                .addTo(map);
+
+                    } else {
+
+                        // Move existing marker
+                        playerMarkers[name]
+                            .setLngLat(position);
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+}
     });
 </script>
 
