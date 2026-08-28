@@ -105,7 +105,7 @@
     const labelWords = [
         "Kevin", "Kevan", "Keven", "Kevyn", "Jason",
         "Riley", "Reilly", "Rileigh", "Rilee", "Rylee", "Ryleigh", "Ryley", "Rylie",
-        "Robert", "Rupert", "Bobby", "Royster", "Smoke", "Sesh",
+        "Robert", "Bobby", "Royster", "Smoke", "Sesh",
         "Thomas", "Tomas", "Everest", "Cheeky", "Tiki",
         "Cole", "Serfass",
         "Sam", "Allan",
@@ -118,6 +118,9 @@
         "Christian", "Cristiano", "Booth",
         "David",
         "Marshall", "Bower",
+        "Justice",
+        "Chase",
+        "Ransom",
         "Shayne",
         "Boy", "Boi",
         "LaBagh Woods"
@@ -303,7 +306,7 @@ const playerColorMap = {};
 
 
 // ============================================================
-// ONLY KEVIN RECEIVES OTHER PLAYERS' LOCATIONS
+// KEVIN: SHOW OTHER PLAYERS AND UPDATE THEM LIVE
 // ============================================================
 
 if (isKevin) {
@@ -321,10 +324,12 @@ if (isKevin) {
             const players =
                 snapshot.val() || {};
 
+            console.log("Firebase player update:", players);
+
             Object.entries(players).forEach(
                 ([name, data]) => {
 
-                    // Never show Kevin's own location
+                    // Never show Kevin
                     if (
                         name.toLowerCase() === "kevin"
                     ) {
@@ -345,58 +350,37 @@ if (isKevin) {
                         data.latitude
                     ];
 
+                    console.log(
+                        "Moving marker:",
+                        name,
+                        position
+                    );
 
-                    // Create marker if needed
+                    // Create marker the first time
                     if (!playerMarkers[name]) {
 
-                        // Assign the next available color
-                        if (!playerColorMap[name]) {
-
-                            playerColorMap[name] =
-                                playerColors[
-                                    nextPlayerColor %
-                                    playerColors.length
-                                ];
-
-                            nextPlayerColor++;
-                        }
-
-                        const markerElement =
-                            document.createElement("div");
-
-                        markerElement.style.width = "20px";
-                        markerElement.style.height = "20px";
-                        markerElement.style.borderRadius = "50%";
-
-                        markerElement.style.backgroundColor =
-                            playerColorMap[name];
-
-                        markerElement.style.border =
-                            "3px solid white";
-
-                        markerElement.style.boxShadow =
-                            "0 1px 4px rgba(0,0,0,0.5)";
-
-
                         playerMarkers[name] =
-                            new maplibregl.Marker({
-                                element: markerElement
-                            })
-                            .setLngLat(position)
-                            .setPopup(
-                                new maplibregl.Popup()
-                                    .setText(name)
-                            )
-                            .addTo(map);
+                            new maplibregl.Marker()
+                                .setLngLat(position)
+                                .setPopup(
+                                    new maplibregl.Popup()
+                                        .setText(name)
+                                )
+                                .addTo(map);
 
-                    } else {
+                    }
 
-                        // Move existing marker
+                    // Move marker every time Firebase changes
+                    else {
+
                         playerMarkers[name]
                             .setLngLat(position);
+
                     }
+
                 }
             );
+
         }
     );
 }
