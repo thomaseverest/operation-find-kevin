@@ -245,7 +245,7 @@ let locationUpdateCount = 0;
 navigator.geolocation.watchPosition(
     (position) => {
         locationUpdateCount++;
-        
+
         console.log("GPS UPDATE #" + locationUpdateCount);
 
         const longitude =
@@ -272,11 +272,14 @@ navigator.geolocation.watchPosition(
     },
 
     (error) => {
-        console.log(
-            "Location error:",
-            error
-        );
-    },
+    alert(
+        "Location error\n" +
+        "Code: " + error.code + "\n" +
+        "Message: " + error.message
+    );
+
+    console.log("Location error:", error);
+},
 
     {
         enableHighAccuracy: true,
