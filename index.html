@@ -240,8 +240,13 @@ const isKevin =
     playerName.toLowerCase() === "kevin";
 
 // Watch the phone's GPS
+let locationUpdateCount = 0;
+
 navigator.geolocation.watchPosition(
     (position) => {
+        locationUpdateCount++;
+        
+        console.log("GPS UPDATE #" + locationUpdateCount);
 
         const longitude =
             position.coords.longitude;
